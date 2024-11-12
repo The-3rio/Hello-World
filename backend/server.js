@@ -31,50 +31,50 @@ app.use("/api/v1/notifications", notificationRoutes);
 app.use("/api/v1/connections", connectionRoutes);
 app.use("/api/v1/chats", chatRoutes);
 // Route to send a new message
-app.post("/messages", async (req, res) => {
-	const { senderId, receiverId, content } = req.body;
-	try {
-	  const message = new Message({ senderId, receiverId, content });
-	  await message.save();
-	  res.status(201).json({ message: "Message sent successfully", data: message });
-	} catch (error) {
-	  res.status(500).json({ error: "Error sending message" });
-	}
-  });
+// app.post("/messages", async (req, res) => {
+// 	const { senderId, receiverId, content } = req.body;
+// 	try {
+// 	  const message = new Message({ senderId, receiverId, content });
+// 	  await message.save();
+// 	  res.status(201).json({ message: "Message sent successfully", data: message });
+// 	} catch (error) {
+// 	  res.status(500).json({ error: "Error sending message" });
+// 	}
+//   });
 // Route to get all messages between two users
-app.get("/messages/:userId/:otherUserId", async (req, res) => {
-	const { userId, otherUserId } = req.params;
-	try {
-	  const messages = await Message.find({
-		$or: [
-		  { senderId: userId, receiverId: otherUserId },
-		  { senderId: otherUserId, receiverId: userId },
-		],
-	  }).sort("timestamp");
-	  res.status(200).json({ messages });
-	} catch (error) {
-	  res.status(500).json({ error: "Error retrieving messages" });
-	}
-  });
+// app.get("/messages/:userId/:otherUserId", async (req, res) => {
+// 	const { userId, otherUserId } = req.params;
+// 	try {
+// 	  const messages = await Message.find({
+// 		$or: [
+// 		  { senderId: userId, receiverId: otherUserId },
+// 		  { senderId: otherUserId, receiverId: userId },
+// 		],
+// 	  }).sort("timestamp");
+// 	  res.status(200).json({ messages });
+// 	} catch (error) {
+// 	  res.status(500).json({ error: "Error retrieving messages" });
+// 	}
+//   });
   
   // Route to mark a message as read
-  app.put("/messages/:messageId/read", async (req, res) => {
-	const { messageId } = req.params;
-	try {
-	  const message = await Message.findByIdAndUpdate(
-		messageId,
-		{ read: true },
-		{ new: true }
-	  );
-	  if (message) {
-		res.status(200).json({ message: "Message marked as read", data: message });
-	  } else {
-		res.status(404).json({ error: "Message not found" });
-	  }
-	} catch (error) {
-	  res.status(500).json({ error: "Error updating message status" });
-	}
-  });  
+//   app.put("/messages/:messageId/read", async (req, res) => {
+// 	const { messageId } = req.params;
+// 	try {
+// 	  const message = await Message.findByIdAndUpdate(
+// 		messageId,
+// 		{ read: true },
+// 		{ new: true }
+// 	  );
+// 	  if (message) {
+// 		res.status(200).json({ message: "Message marked as read", data: message });
+// 	  } else {
+// 		res.status(404).json({ error: "Message not found" });
+// 	  }
+// 	} catch (error) {
+// 	  res.status(500).json({ error: "Error updating message status" });
+// 	}
+//   });  
 
 
 if (process.env.NODE_ENV === "production") {
