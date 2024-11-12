@@ -10,7 +10,7 @@ import notificationRoutes from "./routes/notification.route.js";
 import connectionRoutes from "./routes/connection.route.js";
 import chatRoutes from "./routes/chat.route.js"
 import { connectDB } from "./lib/db.js";
-// import Message from "./models/chatModel.js";
+
 
 dotenv.config();
 
