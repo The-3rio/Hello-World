@@ -70,7 +70,7 @@ const Navbar = () => {
 									)}
 								</Link>
 
-								<Link to='/chat' className="text-neutral flex flex-col items-center relative">
+								<Link to={`/chat/${authUser.username}`} className="text-neutral flex flex-col items-center relative">
 								<MessageCircle size={20}/>
 								<span className='text-xs hidden md:block'>Chats</span>
 									{unreadNotificationCount > 0 && (

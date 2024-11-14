@@ -21,7 +21,6 @@ const PostPage = () => {
 			<div className='hidden lg:block lg:col-span-1'>
 				<Sidebar user={authUser} />
 			</div>
-
 			<div className='col-span-1 lg:col-span-3'>
 				<Post post={post.data} />
 			</div>
