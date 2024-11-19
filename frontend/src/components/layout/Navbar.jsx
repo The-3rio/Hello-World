@@ -19,12 +19,15 @@ const Navbar = () => {
 		enabled: !!authUser,
 	});
 
+
 	const { mutate: logout } = useMutation({
 		mutationFn: () => axiosInstance.post("/auth/logout"),
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["authUser"] });
 		},
 	});
+
+
 
 	const unreadNotificationCount = notifications?.data.filter((notif) => !notif.read).length;
 	const unreadConnectionRequestsCount = connectionRequests?.data?.length;
@@ -72,15 +75,15 @@ const Navbar = () => {
 
 								<Link to={`/chat/${authUser.username}`} className="text-neutral flex flex-col items-center relative">
 								<MessageCircle size={20}/>
-								<span className='text-xs hidden md:block'>Chats</span>
-									{unreadNotificationCount > 0 && (
+								 <span className='text-xs hidden md:block'>Chats</span>
+									{/*{unreadMessagesCount > 0 && (
 										<span
 											className='absolute -top-1 -right-1 md:right-4 bg-blue-500 text-white text-xs 
 										rounded-full size-3 md:size-4 flex items-center justify-center'
 										>
-											{unreadNotificationCount}
+											{unreadMessagesCount}
 										</span>
-									)}
+									)} */}
 								</Link>
 
 								<Link

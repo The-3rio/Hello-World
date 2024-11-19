@@ -1,14 +1,18 @@
 import { useQuery } from "@tanstack/react-query";
 import { axiosInstance } from "../lib/axios";
-import React, { useState, useEffect } from "react";
-import { useParams } from 'react-router-dom';
-import Cookies from 'js-cookie';
+import React, { useState, useEffect, useRef } from "react";
+import { useParams } from "react-router-dom";
+import Cookies from "js-cookie";
+import io from "socket.io-client";
+
+const ENDPOINT = "http://localhost:8000";
+let socket;
 
 const ChatPage = () => {
   const { username } = useParams();
   const { data: authUser } = useQuery({
     queryKey: ["authUser"],
-    queryFn: () => axiosInstance.get("/auth/user"), // Assuming there's an endpoint to get the authenticated user
+    queryFn: () => axiosInstance.get("/auth/user"),
   });
 
   const { data: connections } = useQuery({
@@ -19,30 +23,29 @@ const ChatPage = () => {
   const [selectedUser, setSelectedUser] = useState(null);
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
-
-  // Fetch messages when a user is selected
-  useEffect(() => {
-    if (selectedUser) {
-      fetchMessages(authUser._id, selectedUser._id);
-    }
-  }, [selectedUser, authUser]);
+  
+  // Ref for chat container to scroll to bottom
+  const messagesEndRef = useRef(null);
+  
+  // State to track unread messages for each user
+  const [unreadMessages, setUnreadMessages] = useState({});
 
   const fetchMessages = async (userId, otherUserId) => {
-    
     try {
-      // Updated fetch call to match the backend route '/api/v1/chats/:id'
-      const response = await fetch(`http://localhost:8000/api/v1/chats/send/${userId}/${otherUserId}`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${Cookies.get("jwt-linkedin")}`,
-        },
-      });
+      const response = await fetch(
+        `http://localhost:8000/api/v1/chats/send/${userId}/${otherUserId}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${Cookies.get("jwt-linkedin")}`,
+          },
+        }
+      );
       if (!response.ok) {
         throw new Error("Failed to fetch messages");
       }
       const data = await response.json();
-      console.log(data)
       setMessages(data.messages);
     } catch (err) {
       console.error("Error fetching messages:", err);
@@ -51,39 +54,69 @@ const ChatPage = () => {
 
   const handleUserClick = (user) => {
     setSelectedUser(user);
-    setMessages([]); // Clear messages when a new user is selected
+    setMessages([]); // Clear messages when selecting a new user
+    setUnreadMessages((prevUnreadMessages) => {
+      // Mark messages as read when the user clicks on them
+      const updatedUnreadMessages = { ...prevUnreadMessages };
+      delete updatedUnreadMessages[user._id]; // Remove from unread
+      return updatedUnreadMessages;
+    });
   };
 
-  const sendMessage = async (senderId, receiverId, content) => {
-    try {
-      const response = await fetch(`http://localhost:8000/api/v1/chats/send/${senderId}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${Cookies.get("jwt-linkedin")}`,
-        },
-        body: JSON.stringify({ senderId, receiverId, content }),
+  useEffect(() => {
+    socket = io(ENDPOINT);
+  
+    return () => {
+      socket.disconnect(); // Ensure clean disconnection
+    };
+  }, []);
+  
+  useEffect(() => {
+    if (selectedUser) {
+      socket.emit("joinChat", { userId: authUser._id, otherUserId: selectedUser._id });
+  
+      // Fetch chat history
+      fetchMessages(authUser._id, selectedUser._id);
+  
+      socket.on("receiveMessage", (newMessage) => {
+        setMessages((prevMessages) => [...prevMessages, newMessage]);
+        
+        // If the new message is for the selected user, don't highlight it as unread
+        if (newMessage.senderId !== selectedUser._id) {
+          setUnreadMessages((prevUnreadMessages) => {
+            return {
+              ...prevUnreadMessages,
+              [newMessage.senderId]: (prevUnreadMessages[newMessage.senderId] || 0) + 1,
+            };
+          });
+        }
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Error sending message");
-      }
-
-      const data = await response.json();
-      return data.data;
-    } catch (error) {
-      console.error("Error sending message:", error.message);
+  
+      // Cleanup
+      return () => {
+        socket.off("receiveMessage");
+      };
     }
-  };
+  }, [selectedUser, authUser]);
 
-  const handleSendMessage = async () => {
+  // Scroll to bottom whenever messages change
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages]);
+
+  const sendMessage = (e) => {
+    e.preventDefault();
     if (input.trim() && selectedUser) {
-      const message = await sendMessage(authUser._id, selectedUser._id, input);
-      if (message) {
-        setMessages([...messages, { id: message._id, text: message.content, sender: authUser._id }]);
-      }
-      setInput(""); // Clear input after sending
+      const messageData = {
+        senderId: authUser._id,
+        receiverId: selectedUser._id,
+        content: input,
+      };
+  
+      socket.emit("sendMessage", messageData);
+      setInput("");
     }
   };
 
@@ -98,7 +131,11 @@ const ChatPage = () => {
               key={user._id}
               onClick={() => handleUserClick(user)}
               className={`flex items-center p-2 rounded-lg cursor-pointer ${
-                selectedUser?.id === user.id ? "bg-blue-100" : "hover:bg-gray-100"
+                selectedUser?._id === user._id
+                  ? "bg-blue-100"
+                  : unreadMessages[user._id] > 0
+                  ? "bg-yellow-100" // Highlight unread messages
+                  : "hover:bg-gray-100"
               }`}
             >
               <img src={user.img} alt={user.name} className="w-10 h-10 rounded-full mr-3" />
@@ -117,9 +154,9 @@ const ChatPage = () => {
         </div>
 
         <div className="flex flex-col flex-1 p-4 overflow-y-auto space-y-2">
-          {messages.map((message) => (
+          {messages.map((message, index) => (
             <div
-              key={message._id}
+              key={index}
               className={`${
                 message.senderId === authUser._id ? "self-end bg-blue-500" : "self-start bg-gray-300"
               } rounded-lg p-2 px-4 text-white max-w-xs`}
@@ -127,9 +164,12 @@ const ChatPage = () => {
               {message.content}
             </div>
           ))}
+          {/* This div will be used to scroll to the bottom */}
+          <div ref={messagesEndRef} />
         </div>
 
-        <div className="flex items-center p-4 bg-gray-200">
+        <div >
+        <form className="flex items-center p-4 bg-gray-200" onSubmit={sendMessage}>
           <input
             type="text"
             value={input}
@@ -138,12 +178,12 @@ const ChatPage = () => {
             className="flex-1 p-2 rounded-lg border border-gray-300 focus:outline-none focus:border-blue-500"
           />
           <button
-            onClick={handleSendMessage}
+            type="submit"
             className="ml-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
             disabled={!selectedUser}
           >
             Send
-          </button>
+          </button></form>
         </div>
       </div>
     </div>
