@@ -50,7 +50,7 @@ const server = app.listen(PORT, () => {
 const io = new Server(server, {
 	pingTimeout: 60000,
 	cors: {
-	  origin: "http://localhost:5173",
+	  origin: "http://localhost:5173"||"http://192.168.29.72:5173",
 	  // credentials: true,
 	},
   });
