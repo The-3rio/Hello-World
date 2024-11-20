@@ -35,7 +35,6 @@ export const getMessages = async (req, res) => {
             { senderId: otherUserId, receiverId: userId },
           ],
         }).sort("timestamp");
-        console.log(messages);
         res.status(200).json({ messages });
       } catch (error) {
         res.status(500).json({ error: "Error retrieving messages" });
