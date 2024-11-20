@@ -56,35 +56,25 @@ const io = new Server(server, {
   });
 
   io.on("connection", (socket) => {
-	console.log("User connected:", socket.id);
+	console.log("A user connected:", socket.id);
   
-	// Join a specific chat room
+	// Handle joining a chat room
 	socket.on("joinChat", ({ userId, otherUserId }) => {
-	  const roomId = [userId, otherUserId].sort().join("_"); // Unique room identifier
-	  socket.join(roomId);
-	  console.log(`User ${userId} joined room ${roomId}`);
+	  const room = [userId, otherUserId].sort().join("_"); // Create a unique room ID
+	  socket.join(room);
+	  console.log(`${userId} joined room: ${room}`);
 	});
   
 	// Handle sending messages
-	socket.on("sendMessage", async (messageData) => {
-		const { senderId, receiverId, content } = messageData;
-	  
-		try {
-		  const message = new chat({ senderId, receiverId, content });
-		  await message.save();
-	  
-		  const roomId = [senderId, receiverId].sort().join("_");
-		  io.to(roomId).emit("receiveMessage", message); // Emit to the specific room
-		} catch (error) {
-		  console.error("Error sending message:", error);
-		}
-	  });
-	  
-
+	socket.on("sendMessage", (messageData) => {
+	  const room = [messageData.senderId, messageData.receiverId].sort().join("_"); // Ensure the same room ID
+	  io.to(room).emit("receiveMessage", messageData);
+	  console.log("Message sent to room:", room, messageData);
+	});
   
 	// Handle disconnection
 	socket.on("disconnect", () => {
-	  console.log("User disconnected:", socket.id);
+	  console.log("A user disconnected:", socket.id);
 	});
   });
   

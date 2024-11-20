@@ -66,38 +66,27 @@ const ChatPage = () => {
   useEffect(() => {
     socket = io(ENDPOINT);
   
-    return () => {
-      socket.disconnect(); // Ensure clean disconnection
-    };
-  }, []);
-  
-  useEffect(() => {
+    // Join the chat room when a user is selected
     if (selectedUser) {
+      const room = [authUser._id, selectedUser._id].sort().join("_"); // Create a unique room ID
       socket.emit("joinChat", { userId: authUser._id, otherUserId: selectedUser._id });
   
       // Fetch chat history
       fetchMessages(authUser._id, selectedUser._id);
   
+      // Listen for new messages in the room
       socket.on("receiveMessage", (newMessage) => {
         setMessages((prevMessages) => [...prevMessages, newMessage]);
-        
-        // If the new message is for the selected user, don't highlight it as unread
-        if (newMessage.senderId !== selectedUser._id) {
-          setUnreadMessages((prevUnreadMessages) => {
-            return {
-              ...prevUnreadMessages,
-              [newMessage.senderId]: (prevUnreadMessages[newMessage.senderId] || 0) + 1,
-            };
-          });
-        }
       });
-  
-      // Cleanup
-      return () => {
-        socket.off("receiveMessage");
-      };
     }
+  
+    // Cleanup
+    return () => {
+      socket.off("receiveMessage");
+      socket.disconnect(); // Ensure the socket disconnects properly
+    };
   }, [selectedUser, authUser]);
+  
 
   // Scroll to bottom whenever messages change
   useEffect(() => {
