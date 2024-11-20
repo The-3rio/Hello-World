@@ -87,6 +87,7 @@ const ChatPage = () => {
     };
   }, [selectedUser, authUser]);
   
+console.log(connections);
 
   // Scroll to bottom whenever messages change
   useEffect(() => {
@@ -116,18 +117,19 @@ const ChatPage = () => {
         <h2 className="text-2xl font-bold mb-4">Chats</h2>
         <div className="space-y-4">
           {connections?.data?.map((user) => (
+            
             <div
               key={user._id}
               onClick={() => handleUserClick(user)}
               className={`flex items-center p-2 rounded-lg cursor-pointer ${
                 selectedUser?._id === user._id
-                  ? "bg-blue-100"
+                  ? "bg-primary text-white"
                   : unreadMessages[user._id] > 0
                   ? "bg-yellow-100" // Highlight unread messages
                   : "hover:bg-gray-100"
               }`}
             >
-              <img src={user.img} alt={user.name} className="w-10 h-10 rounded-full mr-3" />
+              <img src={user.profilePicture} alt={user.name} className="w-10 h-10 rounded-full mr-3" />
               <div>
                 <h3 className="text-lg font-semibold">{user.name}</h3>
               </div>
@@ -138,7 +140,7 @@ const ChatPage = () => {
 
       {/* Chat Window */}
       <div className="flex flex-col w-full h-full">
-        <div className="flex items-center justify-between p-4 bg-blue-600 text-white shadow-md">
+        <div className="flex items-center justify-between p-4 bg-primary text-white shadow-md">
           <h2 className="text-xl font-bold">{selectedUser ? selectedUser.name : "Select a User"}</h2>
         </div>
 
@@ -147,7 +149,7 @@ const ChatPage = () => {
             <div
               key={index}
               className={`${
-                message.senderId === authUser._id ? "self-end bg-blue-500" : "self-start bg-gray-300"
+                message.senderId === authUser._id ? "self-end bg-primary" : "self-start bg-gray-300"
               } rounded-lg p-2 px-4 text-white max-w-xs`}
             >
               {message.content}
@@ -168,7 +170,8 @@ const ChatPage = () => {
           />
           <button
             type="submit"
-            className="ml-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            
+            className="bg-primary text-white px-4 py-2 rounded-md hover:bg-primary-dark transition-colors m-1"
             disabled={!selectedUser}
           >
             Send
