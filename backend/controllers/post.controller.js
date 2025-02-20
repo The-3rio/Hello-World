@@ -3,76 +3,6 @@ import Post from '../models/post.model.js';
 import Notification from "../models/notification.model.js";
 // import { sendCommentNotificationEmail } from "../emails/emailHandlers.js";
 
-// export const createPost = async (req, res) => {
-// 	try {
-// 	  const { content, scheduledPostDate } = req.body;
-// 	  // Validate scheduledPostDate (if provided)
-// 	  let postStatus = "published"; // Default status
-// 	  let postScheduledDate = null; // Default scheduled date
-// 	  if (scheduledPostDate) {
-// 		const date = new Date(scheduledPostDate);
-// 		if (date > new Date()) {
-// 		  postStatus = "scheduled";
-// 		  postScheduledDate = date;
-// 		}
-// 	  }
-// 	  const newPost = await Post.create({
-// 		author: req.user._id,
-// 		content,
-// 		scheduledPostDate: postScheduledDate,
-// 		status: postStatus,
-// 	  });
-  
-// 	  res.status(201).json(newPost);
-// 	} catch (error) {
-// 	  console.error("Error creating post:", error);
-// 	  res.status(500).json({ message: "Failed to create post" });
-// 	}
-//   };
-  
-// export const createPost = async (req, res) => {
-// 	try {
-// 	  const { content, image, scheduledPostDate } = req.body;
-// 	  let newPost;
-  
-// 	  // Parse and validate the scheduledPostDate (if provided)
-// 	  let scheduledDate = null;
-// 	  if (scheduledPostDate) {
-// 		const parsedDate = new Date(scheduledPostDate);
-// 		if (isNaN(parsedDate.getTime())) {
-// 		  return res.status(400).json({ message: "Invalid scheduled date value" });
-// 		}
-// 		scheduledDate = parsedDate;
-// 	  }
-  
-// 	  // Create the post object with or without the image
-// 	  if (image) {
-// 		const imgResult = await cloudinary.uploader.upload(image);
-// 		newPost = new Post({
-// 		  author: req.user._id,
-// 		  content,
-// 		  image: imgResult.secure_url,
-// 		  scheduledPostDate: scheduledDate || null, // Null for normal posts
-// 		  status: scheduledDate ? "scheduled" : "published", // Status based on whether it's scheduled
-// 		});
-// 	  } else {
-// 		newPost = new Post({
-// 		  author: req.user._id,
-// 		  content,
-// 		  scheduledPostDate: scheduledDate || null,
-// 		  status: scheduledDate ? "scheduled" : "published",
-// 		});
-// 	  }
-  
-// 	  // Save the post
-// 	  await newPost.save();
-  
-// 	  res.status(201).json(newPost);
-// 	} catch (error) {
-// 	  console.error("Error in createPost controller:", error);
-// 	  res.status(500).json({ message: "Server error" });
-// 	}
-//   };
   
   // Create Post Controller
 export const createPost = async (req, res) => {
@@ -125,26 +55,40 @@ export const createPost = async (req, res) => {
 // 	}
 //   };
   
+import User from "../models/user.model.js"; // Import User model
+
 export const getFeedPosts = async (req, res) => {
-	try {
-		const now = new Date();
-		// Fetch published posts and scheduled posts that are ready to be displayed
-		const posts = await Post.find({
-		  $or: [
-			{ status: "published" },
-			{ status: "scheduled", scheduledPostDate: { $lte: now } },
-		  ],
-		})
-		  .sort({ createdAt: -1 })
-		  .populate("author", "name profilePicture");
-	
-		res.status(200).json(posts);
-	  } catch (error) {
-		console.error("Error fetching posts:", error);
-		res.status(500).json({ message: "Failed to fetch posts" });
-	  }
-	  
+  try {
+    const now = new Date();
+    const userId = req.user._id; // Get logged-in user ID from auth middleware
+
+    // Fetch the user's connections
+    const user = await User.findById(userId).select("connections");
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const connectionIds = user.connections.map(conn => conn.toString()); // Convert ObjectIds to strings
+
+    // Fetch posts from the user, their connections, and scheduled posts that should be visible
+    const posts = await Post.find({
+      $or: [
+        { author: userId }, // User's own posts
+        { author: { $in: connectionIds } }, // Posts from connections
+        { status: "scheduled", scheduledPostDate: { $lte: now }, author: { $in: connectionIds } } // Scheduled posts from connections
+      ],
+    })
+      .sort({ createdAt: -1 })
+      .populate("author", "name profilePicture");
+
+    res.status(200).json(posts);
+  } catch (error) {
+    console.error("Error fetching posts:", error);
+    res.status(500).json({ message: "Failed to fetch posts" });
+  }
 };
+
 
 export const deletePost = async (req, res) => {
 	try {
@@ -411,4 +355,73 @@ export const schedulePost = async (req, res) => {
 // 	  res.status(500).json({ message: "Server error" });
 // 	}
 //   };
+  // export const createPost = async (req, res) => {
+// 	try {
+// 	  const { content, scheduledPostDate } = req.body;
+// 	  // Validate scheduledPostDate (if provided)
+// 	  let postStatus = "published"; // Default status
+// 	  let postScheduledDate = null; // Default scheduled date
+// 	  if (scheduledPostDate) {
+// 		const date = new Date(scheduledPostDate);
+// 		if (date > new Date()) {
+// 		  postStatus = "scheduled";
+// 		  postScheduledDate = date;
+// 		}
+// 	  }
+// 	  const newPost = await Post.create({
+// 		author: req.user._id,
+// 		content,
+// 		scheduledPostDate: postScheduledDate,
+// 		status: postStatus,
+// 	  });
   
+// 	  res.status(201).json(newPost);
+// 	} catch (error) {
+// 	  console.error("Error creating post:", error);
+// 	  res.status(500).json({ message: "Failed to create post" });
+// 	}
+//   };
+  
+// export const createPost = async (req, res) => {
+// 	try {
+// 	  const { content, image, scheduledPostDate } = req.body;
+// 	  let newPost;
+  
+// 	  // Parse and validate the scheduledPostDate (if provided)
+// 	  let scheduledDate = null;
+// 	  if (scheduledPostDate) {
+// 		const parsedDate = new Date(scheduledPostDate);
+// 		if (isNaN(parsedDate.getTime())) {
+// 		  return res.status(400).json({ message: "Invalid scheduled date value" });
+// 		}
+// 		scheduledDate = parsedDate;
+// 	  }
+  
+// 	  // Create the post object with or without the image
+// 	  if (image) {
+// 		const imgResult = await cloudinary.uploader.upload(image);
+// 		newPost = new Post({
+// 		  author: req.user._id,
+// 		  content,
+// 		  image: imgResult.secure_url,
+// 		  scheduledPostDate: scheduledDate || null, // Null for normal posts
+// 		  status: scheduledDate ? "scheduled" : "published", // Status based on whether it's scheduled
+// 		});
+// 	  } else {
+// 		newPost = new Post({
+// 		  author: req.user._id,
+// 		  content,
+// 		  scheduledPostDate: scheduledDate || null,
+// 		  status: scheduledDate ? "scheduled" : "published",
+// 		});
+// 	  }
+  
+// 	  // Save the post
+// 	  await newPost.save();
+  
+// 	  res.status(201).json(newPost);
+// 	} catch (error) {
+// 	  console.error("Error in createPost controller:", error);
+// 	  res.status(500).json({ message: "Server error" });
+// 	}
+//   };
